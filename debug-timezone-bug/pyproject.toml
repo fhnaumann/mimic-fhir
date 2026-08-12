@@ -1,0 +1,12 @@
+[project]
+name = "debug-timezone-bug"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "duckdb>=1.5.5",
+    "fhir>=0.0.4",
+    "notebook>=7.6.1",
+    "pyspark>=4.2.0",
+]
