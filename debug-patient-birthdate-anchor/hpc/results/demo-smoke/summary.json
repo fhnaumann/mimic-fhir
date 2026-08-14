@@ -1,0 +1,106 @@
+{
+  "source": "prebuilt DuckDB at ~/warehouses/mimic4-demo.db (mimiciv_hosp)",
+  "cross_check_vs_mimiciv_derived_age": {
+    "ran": true,
+    "n_joined": 275,
+    "n_mismatch": 0
+  },
+  "cohort": {
+    "patients_total": 100,
+    "patients_published": 100,
+    "admissions_total": 275,
+    "admissions_scored": 275
+  },
+  "tier1_calendar_year_age": {
+    "admissions_wrong": 0,
+    "subjects_wrong": 0,
+    "pct_admissions": 0.0,
+    "error_years_min": 0,
+    "error_years_max": 0
+  },
+  "tier2_elapsed_time_age": {
+    "admissions_wrong": 101,
+    "subjects_wrong": 30,
+    "pct_admissions": 36.7273,
+    "error_years_min": -1,
+    "error_years_max": 0
+  },
+  "after_proposed_fix": {
+    "admissions_wrong_calendar_year": 0,
+    "admissions_wrong_elapsed_time": 0
+  },
+  "edge_cases": {
+    "patients_fixed_birthdate_after_first_event": 0,
+    "patients_published_birthdate_after_first_event": 0,
+    "admissions_canonical_age_negative": 0,
+    "patients_anchor_age_zero": 0
+  },
+  "anchor_year_recovery_candidates": [
+    {
+      "candidate": "year(MIN(transfers.intime))",
+      "patients": 100,
+      "exact": 100,
+      "pct_exact": 100.0,
+      "is_identity": true
+    },
+    {
+      "candidate": "year(MAX(transfers.intime))",
+      "patients": 100,
+      "exact": 63,
+      "pct_exact": 63.0,
+      "is_identity": false
+    },
+    {
+      "candidate": "year(MIN(admissions.admittime))",
+      "patients": 100,
+      "exact": 98,
+      "pct_exact": 98.0,
+      "is_identity": false
+    },
+    {
+      "candidate": "year(MAX(admissions.admittime))",
+      "patients": 100,
+      "exact": 65,
+      "pct_exact": 65.0,
+      "is_identity": false
+    },
+    {
+      "candidate": "year(MIN(admissions.dischtime))",
+      "patients": 100,
+      "exact": 95,
+      "pct_exact": 95.0,
+      "is_identity": false
+    },
+    {
+      "candidate": "year(MAX(admissions.dischtime))",
+      "patients": 100,
+      "exact": 64,
+      "pct_exact": 64.0,
+      "is_identity": false
+    }
+  ],
+  "downstream_concepts": {
+    "charlson": {
+      "admissions": 275,
+      "age_score_changed": 0,
+      "subjects_affected": 0
+    },
+    "sapsii": {
+      "admissions": 275,
+      "age_score_changed": 0,
+      "subjects_affected": 0
+    },
+    "oasis": {
+      "admissions": 275,
+      "age_score_changed": 0,
+      "subjects_affected": 0
+    },
+    "creatinine_baseline": {
+      "cohort_canonical": 275,
+      "cohort_published": 275,
+      "rows_dropped_from_cohort": 0,
+      "rows_added_to_cohort": 0,
+      "mdrd_est_changed": 0
+    }
+  }
+}

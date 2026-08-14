@@ -1,0 +1,7 @@
+candidate,patients,exact,pct_exact,is_identity
+year(MIN(transfers.intime)),100,100,100.0,True
+year(MAX(transfers.intime)),100,63,63.0,False
+year(MIN(admissions.admittime)),100,98,98.0,False
+year(MAX(admissions.admittime)),100,65,65.0,False
+year(MIN(admissions.dischtime)),100,95,95.0,False
+year(MAX(admissions.dischtime)),100,64,64.0,False

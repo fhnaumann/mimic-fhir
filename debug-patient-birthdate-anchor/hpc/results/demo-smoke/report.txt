@@ -1,0 +1,47 @@
+MIMIC-on-FHIR `Patient.birthDate` anchor defect
+==============================================================
+source: prebuilt DuckDB at ~/warehouses/mimic4-demo.db (mimiciv_hosp)
+cross-check vs mimiciv_derived.age: 0 mismatches on 275 joined rows  <- must be 0
+
+patients in source            : 100
+patients given a Patient      : 100
+admissions scored             : 275
+
+-- Tier 1: calendar-year age from the published birthDate ---------------
+  admissions with a wrong age : 0 (0.0000%)
+  patients affected           : 0
+  error range (years)         : 0 .. 0
+
+-- Tier 2: elapsed-time age from the published birthDate ----------------
+  admissions with a wrong age : 101 (36.7273%)
+  patients affected           : 30
+  error range (years)         : -1 .. 0
+
+-- After the proposed one-line fix --------------------------------------
+  calendar-year age wrong     : 0
+  elapsed-time age wrong      : 0
+
+-- Edge cases (report, do not hide) -------------------------------------
+  patients with anchor_age = 0                    : 0
+  admissions whose CANONICAL age is negative      : 0
+  published birthDate after patient's first event : 0
+  fixed birthDate after patient's first event     : 0
+
+-- Can `anchor_year` be recovered from published timestamps? ------------
+  year(MIN(transfers.intime))                100/100 (100.0000%)  IDENTITY
+  year(MAX(transfers.intime))                 63/100 (63.0000%)  not an identity
+  year(MIN(admissions.admittime))             98/100 (98.0000%)  not an identity
+  year(MAX(admissions.admittime))             65/100 (65.0000%)  not an identity
+  year(MIN(admissions.dischtime))             95/100 (95.0000%)  not an identity
+  year(MAX(admissions.dischtime))             64/100 (64.0000%)  not an identity
+
+-- Error distribution (calendar-year age) -------------------------------
+   +0 years :       275 admissions      100 patients
+
+-- Downstream official concepts that read mimiciv_derived.age -----------
+  charlson   age_score changes on 0 admissions (0 patients)
+  sapsii     age_score changes on 0 admissions (0 patients)
+  oasis      age_score changes on 0 admissions (0 patients)
+  creatinine_baseline  mdrd_est changes on 0 rows; cohort (age>=18) 275 -> 275 (0 dropped, 0 added)
+
+-- Worst worked examples (see examples.csv) -----------------------------
