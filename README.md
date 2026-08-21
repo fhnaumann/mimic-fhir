@@ -131,6 +131,11 @@ psql -d mimiciv -f mimic-code/mimic-iv/buildmimic/postgres/validate.sql
     - AMD® Ryzen 9 3900xt 12-core processor × 24 
     - 64 GB RAM
   - It took ~12 hours
+  - `create_fhir_tables.sql` sets `TimeZone = 'UTC'` for the session. MIMIC timestamps are
+    timezone-less wall clock values, and generating under a DST zone shifts any value landing
+    in the spring-forward gap forward by an hour, unrecoverably. Do not override this, and use
+    `create_single_fhir_resource.sql` (which sets it too) rather than running an individual
+    `fhir_*.sql` file directly.
 
 ```sh
 cd sql

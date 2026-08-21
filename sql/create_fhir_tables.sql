@@ -1,4 +1,12 @@
 -- SET client_min_messages TO WARNING; -- ignore notices, lots of small ones for drop tables
+
+-- MIMIC timestamps are timezone-less wall clock values. The CAST(... AS TIMESTAMPTZ)
+-- used throughout the resource SQL interprets them in the session TimeZone, so under a
+-- DST zone the spring-forward gap (02:00-02:59, second Sunday of March) does not exist
+-- and those values are silently shifted forward an hour. UTC has neither a gap nor a
+-- fall-back ambiguity, so the published wall clock matches the source exactly.
+SET TimeZone = 'UTC';
+
 DROP SCHEMA IF EXISTS mimic_fhir CASCADE;
 DROP SCHEMA IF EXISTS fhir_etl CASCADE;
 
