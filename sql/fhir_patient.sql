@@ -11,26 +11,34 @@ CREATE TABLE mimic_fhir.patient(
 WITH tb_admissions AS (
     SELECT
         pat.subject_id
-        -- Set a birth date based on first hospital time, since MIMIC no longer provides a birth date
-        , CAST(CAST(MIN(tfs.intime) AS DATE) - CAST(pat.anchor_age || 'years' AS INTERVAL) AS DATE) AS pat_BIRTH_DATE
+        -- Set a birth date from the anchor pair, since MIMIC no longer provides a birth date.
+        -- anchor_age is the patient's age in anchor_year, and mimic-code defines age as
+        -- anchor_age + DATETIME_DIFF(admittime, DATETIME(anchor_year,1,1), YEAR), so anchoring
+        -- to Jan 1 of anchor_year reproduces that definition exactly. Jan 1 also makes the
+        -- calendar-year and elapsed-time (anniversary rule) age computations agree, which they
+        -- do not for an arbitrary month and day.
+        , CAST(MAKE_DATE(pat.anchor_year, 1, 1) - CAST(pat.anchor_age || 'years' AS INTERVAL) AS DATE) AS pat_BIRTH_DATE
         , MIN(adm.marital_status) AS adm_MARITAL_STATUS
         , MIN(adm.race) AS adm_RACE
         , MIN(adm.language) AS adm_LANGUAGE
-    FROM  
+    FROM
         mimiciv_hosp.patients pat
-        INNER JOIN mimiciv_hosp.transfers tfs
-            ON pat.subject_id = tfs.subject_id
-        -- Grab latest admittime to get the latest demographic info 
+        -- transfers is no longer joined: the birth date came from MIN(tfs.intime), and the
+        -- INNER JOIN meant a patient with no transfer row got no birthDate at all. The anchor
+        -- pair is on the patients row itself and is populated for every patient, including
+        -- ED-only stays, so it has strictly better coverage and needs no join.
+        -- Grab latest admittime to get the latest demographic info
         LEFT JOIN (SELECT subject_id, MAX(admittime) AS admittime
             FROM mimiciv_hosp.admissions
                 GROUP BY subject_id) adm_max
             ON pat.subject_id = adm_max.subject_id
         LEFT JOIN mimiciv_hosp.admissions adm
-            ON adm_max.subject_id = adm.subject_id 
+            ON adm_max.subject_id = adm.subject_id
             AND adm_max.admittime = adm.admittime
-    GROUP BY 
+    GROUP BY
         pat.subject_id
         , pat.anchor_age
+        , pat.anchor_year
 ), ed_race AS (
     SELECT 
         ed.subject_id
