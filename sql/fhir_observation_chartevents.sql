@@ -78,6 +78,39 @@ SELECT
             CASE WHEN ce_VALUENUM IS NULL THEN
                 ce_VALUE
             ELSE NULL END
+        -- When a row carries both a number and text, valueQuantity above takes value[x] and
+        -- the verbatim chartevents.value would otherwise be discarded. For 147 itemids the
+        -- text carries meaning the number does not: itemid 223900 (GCS - Verbal Response)
+        -- publishes both 'No Response-ETT' and 'No Response' as valuenum 1, and all seven
+        -- domains of itemid 229381 (Orientation) share valuenum 1, so the number alone is
+        -- ambiguous. Carry the source text in a component, coded with the same d-items
+        -- coding as Observation.code - the component records the source representation of
+        -- that same item. This mirrors the component use in fhir_observation_vitalsigns.sql,
+        -- and needs no new terminology or profile artifact.
+        --
+        -- The component is emitted only where the text is not the number restated. On most
+        -- rows value is just valuenum as a string ('87' against 87 for a heart rate), where
+        -- the component would be pure redundancy on hundreds of millions of resources. The
+        -- inner CASE guards the cast, so only text already matching the numeric pattern is
+        -- cast; anything else (units, commas, scientific notation) fails the pattern and is
+        -- carried, which is the safe direction.
+        , 'component',
+            CASE WHEN ce_VALUENUM IS NOT NULL AND ce_VALUE IS NOT NULL
+                   AND CASE WHEN ce_VALUE ~ '^\s*-?\d+(\.\d+)?\s*$'
+                            THEN CAST(ce_VALUE AS DOUBLE PRECISION) IS DISTINCT FROM ce_VALUENUM
+                            ELSE TRUE END
+            THEN
+                jsonb_build_array(jsonb_build_object(
+                    'code', jsonb_build_object(
+                        'coding', jsonb_build_array(jsonb_build_object(
+                            'system', 'http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-chartevents-d-items'
+                            , 'code', ce_ITEMID
+                            , 'display', di_LABEL
+                        ))
+                    )
+                    , 'valueString', ce_VALUE
+                ))
+            ELSE NULL END
         , 'referenceRange',
             CASE WHEN di_LOWNORMALVALUE IS NOT NULL OR di_HIGHNORMALVALUE IS NOT NULL THEN
                 jsonb_build_array(jsonb_build_object(
