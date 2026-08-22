@@ -32,6 +32,7 @@ parallel compression from the contribution of changing engine (§6). Also comple
 | Mean cores busy, whole run | 1.10 | 19.8 | 22.4 |
 | Peak memory | 136.3 GiB | 247.2 GiB | 243.1 GiB |
 | Spilled to disk | not measured (§6b) | not measured | **0 bytes** |
+| Intermediate storage, excl. output (§6c) | ~1.05 TiB *derived* | **4.7 GiB** | **4.7 GiB** |
 | Output, as the pipeline writes it | 492.2 GiB `.ndjson` | 29.2 GiB `.ndjson.gz` | **24.3 GiB `.ndjson.zst`** |
 | Output, all in IG shape (§7) | 28.5 GiB `.gz` | 29.2 GiB `.gz` | **24.3 GiB `.zst`** |
 | Rows / lines emitted | 555,352,597 | 555,352,597 | 555,352,597 |
@@ -311,13 +312,47 @@ Job `30374316`, now complete: **3 h 11 m 21 s wall, 169.4 min of write time, 33.
 3 h 11 m — still 4.7× faster than psql's full pipeline, but a different result entirely from
 18 minutes. One `COPY` option accounts for most of the headline.
 
-**The parallel output is also smaller, which is counter-intuitive and worth stating.** Splitting
-a stream into 64 independent gzip members should compress *worse* — each member starts with an
-empty dictionary. It compresses better here because `preserve_insertion_order = false` means the
-single-stream writer receives an arbitrary interleave of rows from all threads, while
-`PER_THREAD_OUTPUT` keeps each thread's rows contiguous. The locality gained outweighs the shared
-dictionary lost. The effect is strongly resource-dependent: 13% on `chartevents`, 13% on
-`medication_statement_ed`, 12% on `specimen_lab`, and ~0% on most others.
+**The parallel output is also smaller, which is counter-intuitive — but the 7.9% total is not a
+general property of parallel gzip, and should not be cited as one.** Splitting a stream into 64
+independent gzip members should compress *worse*: each member restarts with an empty dictionary and
+pays its own header, trailer and Huffman tables. Per resource, that is exactly what happens almost
+everywhere. The aggregate is dominated by a handful of resources pulling the other way:
+
+| direction | resources | net bytes | as % of their own size |
+|---|---:|---:|---:|
+| single-stream **larger** | 8 | +2,490,984,012 | — |
+| single-stream **smaller** | 21 | −3,499,275 | **−0.027%** |
+| byte-identical | 1 | 0 | 0 |
+| **net** | 30 | **+2,487,484,737** | +7.9% |
+
+*Percentages in this subsection are expressed against the parallel build, so "+7.9%" and the
+"7.3% smaller" in the table above are the same 2.49 GB measured from opposite ends.*
+
+**`MimicObservationChartevents` alone is 94.7% of the net difference** (+2,356,020,253, +15.0%).
+Four others contribute meaningfully — `specimen_lab` +13.8%, `medication_statement_ed` +14.9%,
+`specimen` +6.0%, `micro_org` +1.8% — and the remaining 25 are within ±0.3%.
+
+Two clean controls fall out of the per-resource data:
+
+- **`MimicOrganization` wrote 1 part and is byte-identical in both runs** (314 bytes, delta exactly
+  0). With one part, `PER_THREAD_OUTPUT` degenerates to a single stream — so nothing *else* differs
+  between the two builds. The deltas below are attributable to the write mode, not to run-to-run
+  variation.
+- **`MimicLocation` wrote 15 parts and is 70% *larger* in parallel** (5,890 vs 1,768 bytes) — 275
+  bytes of member overhead per part. On a 17 KB resource that overhead is the entire file. This is
+  the per-member cost in isolation, unmasked by any locality gain.
+
+So both effects are real and they act in opposite directions. The dictionary/header cost is
+uniform and small (−0.027%); the locality gain is rare and occasionally enormous. `chartevents` is
+where consecutive rows are most alike — same subject, same item, same units, same coding block
+repeated — so preserving contiguity pays there and essentially nowhere else. **Why `labevents`,
+which is also huge and repetitive, shows no effect at all (−0.0%) is not explained by this account
+and has not been investigated.**
+
+⚠️ **Two variables differ between these runs, not one.** B′ was 8 threads single-stream; B was 64
+threads with `PER_THREAD_OUTPUT`. Thread count changes the interleave granularity as well as the
+write mode, so the 7.9% is the combined effect. Isolating them would need a 64-thread single-stream
+run, which has not been done.
 
 ⚠️ **B′ ran on 8 CPU / 48 G, not the full node.** It isolates the compressor serialisation, and
 its mean of 2.27 cores shows the ceiling directly — even with 8 CPUs available, a single gzip
@@ -408,6 +443,84 @@ unmeasured psql spill would mean psql's times are *worse* than its configuration
 which flatters DuckDB. Stating the caveat is what keeps the comparison defensible.
 
 ---
+
+## 6c. Intermediate storage
+
+**Neither sampler recorded disk usage** — both wrote only `epoch,mem_current_bytes,cpu_usage_usec`,
+and `PSQL_RUN_METRICS.md` already listed final `pgdata` size as uncaptured. What follows is therefore *final-state
+measurement plus one bounded inference*, not a sampled peak. It is presented that way deliberately;
+the headline row is marked *derived* for the psql column and measured for the other two.
+
+### Measured, post-run
+
+| | bytes on disk |
+|---|---|
+| `psql-baseline/pgdata` | **745 GiB** (`base/` 736 GiB, `pg_wal` 9.8 GiB) |
+| ↳ `base/16384`, the `mimic4` database | 734 GiB |
+| ↳ largest single relation | **309.8 GiB** |
+| ↳ second largest | 191.0 GiB |
+| `duckdb-port/parquet`, the staging layer | **4.7 GiB** |
+| DuckDB database file | **none — the build ran in-memory** (`--db` is never passed by `run_duckdb_step.sh`) |
+| DuckDB spill | **0 bytes**, measured (§6b) |
+
+Relation sizes come from grouping `base/16384` files by relfilenode and summing Postgres's 1 GiB
+segments — no server needed, which matters because starting one risks crash recovery discarding
+the statistics §6b depends on.
+
+### The inference
+
+`CLUSTER` rewrites a table into a new relfilenode and drops the old one only on commit, so it
+transiently needs a **second full copy** of the table it is clustering. With the largest relation
+at 309.8 GiB, peak `pgdata` during the cluster step was approximately:
+
+```
+745 GiB (final)  +  310 GiB (CLUSTER transient)  ≈  1.05 TiB
+```
+
+Counting the output written afterwards, total scratch draw peaked near **1.24 TiB** (745 GiB
+database + 492 GiB export). Present scratch footprint is **1.3 TiB** for `psql-baseline` against
+**93 GiB** for `duckdb-port` — and 87 GiB of that 93 is the three finished artifacts, not working
+space.
+
+### The upstream 2 TB figure — where it comes from, and why it is the better citation
+
+`README.md:129` states, as installation guidance for the PostgreSQL pipeline:
+
+> Realistically, you probably need 2TB of FREE space on the device you're using
+
+with the authors' reference machine given immediately below: **Ryzen 9 3900XT (24 threads), 64 GB
+RAM, ~12 hours**.
+
+This is *not* in tension with the ~1.05 TiB derived above — it corroborates it, and the gap is
+explained by the RAM difference. On 64 GB, `work_mem`-driven sorts and hash joins over the 313 M-row
+tables spill to `pgsql_tmp` far more aggressively than on our 192 GB allocation, and that temp
+traffic is disk the run must have available. A 2 TB recommendation for a 64 GB machine and a
+~1.05 TiB observed peak on a 192 GB machine are the same pipeline under different memory pressure.
+
+**For the thesis, cite the upstream 2 TB requirement rather than the derived 1.05 TiB.** It is the
+authors' own published figure for their own pipeline, it needs no inference from relfilenode
+arithmetic, and it is the number a reader would actually have to provision against. Use the
+~1.05 TiB as the corroborating measurement, flagged as derived.
+
+### The comparison, and the trade it conceals
+
+Excluding output, psql needed roughly **1.05 TiB of working disk against DuckDB's 4.7 GiB** — a
+factor of ~225×. But this is the least like-for-like number in the document and should carry its
+caveat:
+
+**DuckDB did not avoid the storage; it moved it to RAM.** Postgres materialises every intermediate
+as a durable, crash-safe, indexed relation, which is what a database is for. DuckDB held its
+working set in a 247 GiB memory pool and wrote nothing but the final artifact. Swap the allocation
+and the advantage inverts — a DuckDB run with 32 GiB would spill heavily to exactly the temp
+directory that measured zero here.
+
+So the honest framing is a **trade, not a saving**: psql spent 1.05 TiB of disk and 136 GiB of RAM;
+DuckDB spent 4.7 GiB of disk and 247 GiB of RAM. What DuckDB genuinely eliminates is the *durable*
+intermediate — the 734 GiB `mimic4` database that must exist, be indexed, and be clustered before
+a single FHIR row can be exported. On a machine with enough RAM that is pure overhead; on a machine
+without it, it is the only way the job runs at all.
+
+---
 ## 7. Output artifacts — shape and size
 
 **All three builds now ship the shape the MIMIC-on-FHIR IG distributes: one
@@ -484,6 +597,43 @@ duckdb  {"resourceType":"Patient","meta":{"profile":[...]},"gender":"male","name
 
 Semantically identical, which is why `parity.py` parses both rather than comparing bytes.
 
+This is a measured fact, not an inference from a sample line. If whitespace is the whole story then
+for any resource the per-record byte difference must equal exactly the number of colons plus commas
+in that resource's JSON — one added space each. Two resources are uniform enough in shape to count
+by hand against `sql/fhir_location.sql` and `sql/fhir_organization.sql`:
+
+| resource | records | psql − DuckDB | per record | separators counted in the SQL |
+|---|---:|---:|---:|---:|
+| `MimicLocation` | 39 | 819 | **21.0** | 13 outer + 1 `meta` + 6 `physicalType` + 1 `managingOrganization` = **21** |
+| `MimicOrganization` | 1 | 23 | **23.0** | 13 outer + 1 `meta` + 3 `identifier` + 6 `type` = **23** |
+
+Both land on the counted value exactly, with no remainder — 819 is 39 × 21, not 39 × 20.98. Nothing
+other than the separator spaces contributes a single byte in either resource.
+
+The pattern holds across all 30. Every resource is between **3.6% and 5.5%** larger under psql, and
+the per-record delta tracks document complexity rather than record count: `MimicEncounter`, the most
+deeply nested resource, carries 91.8 bytes/record, while `MimicLocation` and `MimicSpecimenLab`,
+which are flat, carry 21–23. A content difference would not distribute that way — it would show up
+in the resources the fixes touched and nowhere else.
+
+| | |
+|---|---|
+| Total difference | 24,134,760,715 bytes (22.48 GiB) |
+| Records | 555,352,597 |
+| Mean added separators per record | 43.5 |
+
+So **22.5 GiB of the psql artifact is JSON pretty-printing.** Three consequences worth carrying into
+any comparison drawn from this table:
+
+1. **A vs B/C uncompressed is not a content comparison.** The DuckDB builds are not emitting less
+   data; they are emitting the same data without the optional spaces.
+2. **A vs the published IG *is* a valid uncompressed comparison** — both are `jsonb` output with the
+   same whitespace convention, which is what makes the +5,691,409,208-byte chartevents delta
+   attributable to fix #125 rather than to formatting.
+3. **It largely disappears under compression.** Runs of `", "` are exactly what LZ77 collapses, which
+   is why psql's `.gz` (30.60 GB) is *smaller* than DuckDB's (31.40 GB) despite 24 GB more input.
+   That inversion is a row-ordering effect, discussed below — it is not whitespace.
+
 ### Per-resource
 
 | resource | A psql raw | A psql `.gz` | pub raw | pub `.gz` | DuckDB raw | B `.gz` | C `.zst` |
@@ -552,9 +702,38 @@ Wall-clock numbers mean nothing without the output being equivalent. Status:
 | psql line-count verification (`export_manifest.sh`) | ✅ 30/30 PASSED |
 | psql fix verification (#124/#125/#126, value level) | ✅ all PASS |
 | Demo-scale semantic parity, DuckDB vs psql | ✅ 28/30 identical, 2 differ only in `hasMember` array order |
-| **Full-scale parity, 28 resources** (`30376630`) | ✅ **25/28 identical**, 3 differing — analysed below |
-| Full-scale parity, `observation_labevents` (`30376631`) | ⏳ running |
-| Full-scale parity, `observation_chartevents` (`30376632`) | ⏳ running |
+| **Full-scale parity, 28 resources** (`30376630`, 1 h 39 m) | ✅ **25/28 identical**, 3 differing — analysed below |
+| **Full-scale parity, `observation_labevents`** (`30376631`, 2 h 15 m) | ✅ **identical**, 118,171,367 records, 0 differing |
+| **Full-scale parity, `observation_chartevents`** (`30376632`, 4 h 05 m) | ✅ **identical**, 313,645,032 records, 0 differing |
+
+### Full-scale parity is complete: 27 of 30 resources identical
+
+All three shards have finished. Across the whole corpus:
+
+| | |
+|---|---:|
+| Records compared | **555,352,597** |
+| Resources identical | **27 / 30** |
+| Records in fully-identical resources | 524,568,823 (**94.46%**) |
+| Records differing anywhere | **205,186** (**0.037%**) |
+| Records missing, extra or duplicated | **0** |
+
+**The two largest resources — 431,816,399 records, 78% of the corpus — are exactly equal.**
+`chartevents` (313,645,032) and `labevents` (118,171,367) both report `identical: true` with
+`differing_resources: 0`, **and an empty `ignored` map**, so nothing was suppressed to get there.
+Both ran under the digest strategy, which hashes canonicalised JSON per record — key order and
+whitespace normalised away, every value compared.
+
+This is the result the whole port rests on, and it is the one that was genuinely uncertain:
+`chartevents` is where fix #125 lands, where the `fhir_decimal` `DOUBLE` cast is most exercised,
+and where a 313 M-row parallel export had the most room to reorder or drop something. It did not.
+
+⚠️ **Two of the 27 are identical only because `hasMember` ordering was ignored.** The
+`--ignore array_order:$.hasMember` rule fired on exactly two resources —
+`MimicObservationMicroOrg` (109,042 records) and `MimicObservationMicroTest` (18,570) — and
+nowhere else. So the precise claim is **25 of 30 identical with nothing suppressed, plus 2 more
+identical once the accepted `hasMember` ordering is set aside.** Quote it that way; "27/30" alone
+overstates it.
 
 ### The three differing resources — full-scale, 30376630
 
@@ -586,7 +765,8 @@ port surfaced. Element *sets* are identical in every case. If the ordering shoul
 deterministic, the fix is `ORDER BY` in `sql/*.sql` so both backends get it — but that would
 invalidate the completed 516 GB psql baseline, so it is deferred, not done.
 
-**The 20-record `value` difference is a genuine port divergence** and the only one found so far.
+**The 20-record `value` difference is a genuine port divergence, and now that all three shards
+have finished it is the only one in the entire corpus** — 20 records out of 555,352,597.
 
 ```
 psql 100000303380049042   vs   DuckDB 100000303380049040
@@ -693,7 +873,7 @@ Narrative detail for configuration A is in `PSQL_RUN_METRICS.md`; port design an
 
 ---
 
-## 10. Configuration C — zstd — running, job `30378972`
+## 10. Configuration C — zstd — complete, job `30378972` (12 m 54 s)
 
 ```bash
 sbatch -J duckdb-build-zstd --exclusive --cpus-per-task=64 --mem=480G --time=06:00:00 \
@@ -735,10 +915,83 @@ rows, all of them correct, from a file that opens without error.
 quoted as a compression ratio. Note only that parallel zstd came out *smaller* than
 single-stream zstd (33.2 MB vs 66.7 MB), the same locality effect described in §6.
 
+## 11. What can be claimed
+
+Sorted by how much evidence stands behind it. Tier 1 can be stated flatly; tier 2 needs its
+qualifier attached; tier 3 is not currently supported by anything measured here.
+
+### Tier 1 — measured, state without hedging
+
+| claim | evidence |
+|---|---|
+| DuckDB completes the same build **44.0× faster** (gzip) / **58.9×** (zstd), full pipeline to IG shape | §1 |
+| **26.5× / 35.4×** against the minimal path — the fairer comparison, and still the headline conclusion | §1, §2 |
+| DuckDB consumes **2.4× / 2.9× fewer CPU-hours** (6.73 / 5.69 vs 16.42) | §1 |
+| The psql pipeline is effectively serial: **1.10 mean cores busy** across 14 h 52 m | §1 |
+| DuckDB sustains **19.8 / 22.4 mean cores** on the same work | §1 |
+| DuckDB needs **4.7 GiB** of intermediate storage and **spilled 0 bytes** | §6b, §6c |
+| Upstream requires **2 TB free disk** for the psql pipeline, by the authors' own README | `README.md:129` |
+| Output is **24.3 GiB** (zstd) vs 29.2 GiB, same 555,352,597 records | §7 |
+| The psql build **reproduces the published artifact**: 28/30 resources byte-identical | §7 |
+| Full-scale parity across **all 555,352,597 records**: 0 missing, 0 extra, 0 duplicated | §8 |
+| `chartevents` (313.6 M) and `labevents` (118.2 M) are **exactly equal**, nothing suppressed | §8 |
+| Only **20 records in the whole corpus** differ in a value — a documented `DOUBLE` precision limit | §8 |
+| Neither backend was killed, throttled, or hit its Slurm ceiling | §6b |
+
+### Tier 2 — true, but do not state without the qualifier
+
+**"DuckDB needs less intermediate storage"** — correct, but it *moved* the storage to RAM rather
+than eliminating it: 4.7 GiB disk + 247 GiB RAM against 1.05 TiB disk + 136 GiB RAM. What is
+genuinely eliminated is the *durable* intermediate: the 734 GiB indexed, clustered `mimic4`
+database that must exist before one FHIR row is exported. Say that, not "uses less storage".
+
+**"DuckDB scales with the hardware available"** — measured *upward only*. B′ vs B is a direct
+demonstration: one gzip stream capped the whole build at 2.27 mean cores, and removing that cap
+reached 21.45 (§6). Scaling *downward* was never tested — see tier 3.
+
+**"…unlike PostgreSQL"** — the claim holds for **this pipeline as published**, not for PostgreSQL
+as an engine. Postgres has parallel query, partitioning, and parallel index builds; the MIMIC-FHIR
+pipeline uses none of them, which is why it sits at 1.10 cores. Phrase it as a property of the
+pipeline or a reader who knows Postgres will correctly object.
+
+**Every speedup** carries the §2 caveats about what the two pipelines actually do.
+
+### Tier 3 — not supported, do not claim
+
+**"DuckDB degrades gracefully on smaller machines."** Never tested. Every DuckDB run here had
+480 GB allocated and used ~247 GiB. A run under real memory pressure would spill to the temp
+directory that measured zero, and neither the slowdown nor the disk cost is known. This is the
+single largest gap between what is measured and what the thesis wants to argue.
+
+**"DuckDB is cheaper to run."** Cost depends on the price of a 480 GB node versus a 192 GB node for
+15 hours, which was never computed.
+
+**"The DuckDB output is byte-identical to psql."** It is not, and never could be — psql emits
+`jsonb` whitespace (§7). The supportable claim is *semantic* equivalence, and it is now measured
+across all 555,352,597 records: **25 of 30 resources identical with nothing suppressed, 2 more
+identical once the accepted `hasMember` ordering is set aside, and 3 with documented differences —
+2 of them unspecified ordering in the shared SQL, 1 a real `DOUBLE` precision limit affecting 20
+records** (§8). State it at that resolution.
+
+### The one experiment that would move the biggest claim from tier 3 to tier 1
+
+Re-run configuration C with `--mem=64G` — matching the upstream README's reference machine exactly.
+One job, ~1 h at worst. It would answer three things at once: whether DuckDB completes at all under
+the memory the psql authors assumed, how much it spills (the sampler is already in place and already
+proved it reports zero correctly), and what the slowdown is. That converts *"scales to available
+resources"* from an assertion into a measurement, and does it on the same hardware footing the
+upstream authors documented — which is a considerably stronger result than another run on a fat node.
+
+---
+
 ## Open items
 
-- Full-scale parity must pass before any of this is quotable (§8).
-- B′ column completion (§6).
-- Enable the parallel path for zstd before running C (§10).
+- ~~Full-scale parity must pass before any of this is quotable~~ — **done, all three shards
+  complete** (§8). 27/30 identical, 0 records missing or extra, 205,186 differing (0.037%).
+- **A memory-constrained DuckDB run (§11)** — the highest-value remaining experiment.
+  Jobs `30382950` (64 c / 64 G) and `30382951` (24 c / 64 G, upstream reference machine) submitted.
+- ~~B′ column completion~~ — done, job `30374316` (§6).
+- ~~Enable the parallel path for zstd~~ — done, `CONCATENABLE` in `driver.py`, config C complete (§10).
+- Why `labevents` shows no locality effect in B′ vs B while `chartevents` shows 15% (§6).
 - An uncompressed DuckDB control run would remove confound 1 in §2. Cheap — one mid-size
   resource re-exported at `none`/`gzip`/`zstd` gives a same-hardware compression cost.

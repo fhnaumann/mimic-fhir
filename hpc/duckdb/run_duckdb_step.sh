@@ -63,7 +63,13 @@ CPUS="${SLURM_CPUS_PER_TASK:-4}"
 # 60% of --mem, not 100%: memory_limit governs DuckDB's buffer manager only. JSON
 # string building and the writer's buffers sit outside the tracked pool, and RSS
 # was measured at 2.4 GB under a 1 GB limit.
-MEM_MB="${SLURM_MEM_PER_NODE:-16384}"
+#
+# MEM_MB can be pinned explicitly. Needed for the memory-constrained runs: under
+# --exclusive, Slurm may report the node's full memory in SLURM_MEM_PER_NODE
+# rather than the --mem value, which would silently void an experiment whose
+# entire point is the memory ceiling. Pinning it makes the limit deterministic
+# and independent of how Slurm chose to report the allocation.
+MEM_MB="${MEM_MB:-${SLURM_MEM_PER_NODE:-16384}}"
 MEM_LIMIT="$(( MEM_MB * 60 / 100 ))MB"
 
 # Node-local scratch. Left at the default, spills land on Lustre and are slow and
