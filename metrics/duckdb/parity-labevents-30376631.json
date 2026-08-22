@@ -1,0 +1,37 @@
+{
+  "a": "$SCRATCH/psql-baseline/out/mimic4-export",
+  "b": "$SCRATCH/duckdb-port/fhir-gzip-par",
+  "missing_from_a": [],
+  "missing_from_b": [],
+  "resources": {
+    "MimicObservationLabevents": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationLabevents.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationLabevents.ndjson.gz",
+      "strategy": "digest",
+      "stats_a": {
+        "lines": 118171367,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 118171367,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 118171367,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    }
+  }
+}

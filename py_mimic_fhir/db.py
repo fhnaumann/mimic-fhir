@@ -1,21 +1,57 @@
-import psycopg2
 import logging
 import json
+import os
+import weakref
 import pandas as pd
-import pandas_gbq as pdq
-import google.auth
+
+# psycopg2, pandas_gbq and google.auth are imported inside the branch that uses
+# them. They were module-level, which meant a DUCKDB run could not start without
+# the Postgres client library and the whole GCP auth stack installed -- none of
+# which it touches. Deferring them only moves the ImportError from import time to
+# connect time, for the mode that actually needs the dependency.
+
+# --- fork safety for DuckDB --------------------------------------------------
+# An open DuckDB connection owns a background thread pool. fork() copies the
+# mutexes but not the threads, so a child of a process that holds an open
+# connection deadlocks -- on its FIRST query, before it can do anything about it,
+# and even if it opens a brand new connection of its own. Measured: parent does
+# any query and keeps the handle -> child hangs; parent closes the handle first
+# -> child is fine. It is not the pandas conversion; plain fetchall() hangs too.
+#
+# This is not hypothetical here. validate.py builds a connection, calls
+# get_n_patient_id() on it, and then forks a multiprocessing pool -- so every
+# worker would hang, deterministically, not intermittently.
+#
+# So: close every live DuckDB connection immediately before any fork, and let it
+# reopen lazily on the next query. Both sides of the fork stay correct and the
+# common (unforked) case still reuses one connection.
+_DUCKDB_LIVE = weakref.WeakSet()
+
+
+def _duckdb_close_before_fork():
+    for conn in list(_DUCKDB_LIVE):
+        conn._duckdb_drop()
+
+
+if hasattr(os, 'register_at_fork'):
+    os.register_at_fork(before=_duckdb_close_before_fork)
 
 
 class MFDatabaseConnection():
     def __init__(self, sqluser, sqlpass, dbname, host, db_mode, port=5432):
+        # DUCKDB carries the database FILE PATH in `dbname`; sqluser, sqlpass,
+        # host and port are all unused. Kept for the caller's signature.
+        self._duckdb_path = dbname
+        self._duckdb_pid = None
+        self.db_mode = db_mode
         self.db_conn = self.connect_db(
             sqluser, sqlpass, dbname, host, db_mode, port
         )
-        self.db_mode = db_mode
 
     # database connection
     def connect_db(self, sqluser, sqlpass, dbname, host, db_mode, port=5432):
         if db_mode == 'POSTGRES':
+            import psycopg2
             connection = psycopg2.connect(
                 dbname=dbname,
                 user=sqluser,
@@ -25,23 +61,76 @@ class MFDatabaseConnection():
             )
             connection.set_session(readonly=True)
         elif db_mode == 'BIGQUERY':
+            import pandas_gbq as pdq
+            import google.auth
             credentials, project = google.auth.default()
             pdq.context.credentials = credentials
             pdq.context.project = project
             connection = db_mode
+        elif db_mode == 'DUCKDB':
+            connection = self._duckdb_connect()
         else:
             connection = db_mode
         return connection
 
+    def _duckdb_connect(self):
+        import duckdb
+        if not hasattr(duckdb, 'connect'):
+            raise RuntimeError(
+                '`import duckdb` found the repo\'s duckdb/ namespace package '
+                'instead of the PyPI module -- run from outside the repo root'
+            )
+        # read_only is not a nicety. It mirrors POSTGRES's set_session(readonly),
+        # and it is what lets validate.py's worker processes open the same file
+        # at once -- DuckDB permits many concurrent readers but only one writer.
+        conn = duckdb.connect(self._duckdb_path, read_only=True)
+        self._duckdb_pid = os.getpid()
+        _DUCKDB_LIVE.add(self)
+        return conn
+
+    def _duckdb_drop(self):
+        """Release the handle without ending the object's usable life.
+
+        Called before a fork, and by close(). The next read_query() reopens.
+        """
+        conn, self.db_conn, self._duckdb_pid = self.db_conn, None, None
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001 -- already going away
+                pass
+        _DUCKDB_LIVE.discard(self)
+
+    def _duckdb_handle(self):
+        # Reconnect if dropped at a fork, or if we woke up in a different process
+        # (a start method other than fork, or a handle that outlived its owner).
+        if self.db_conn is None or self._duckdb_pid != os.getpid():
+            self.db_conn = self._duckdb_connect()
+        return self.db_conn
+
     def close(self):
         if self.db_mode == 'POSTGRES':
             self.db_conn.close()
+        elif self.db_mode == 'DUCKDB':
+            self._duckdb_drop()
 
     def read_query(self, query):
         if self.db_conn == 'BIGQUERY':
+            import pandas_gbq as pdq
             df = pdq.read_gbq(query)
             if 'fhir' in df.columns:
                 df['fhir'] = df['fhir'].apply(json.loads)
+        elif self.db_mode == 'DUCKDB':
+            df = self._duckdb_handle().execute(query).df()
+            if 'fhir' in df.columns:
+                # psycopg2 decodes a jsonb column to a dict for free, and every
+                # caller here indexes it as one (`fhir['id']`). DuckDB's JSON
+                # type arrives as str, exactly like BigQuery's, so it gets the
+                # same treatment. Guarded, because a materialised table whose
+                # fhir column is already STRUCT-typed would come back as a dict.
+                df['fhir'] = df['fhir'].apply(
+                    lambda v: json.loads(v) if isinstance(v, str) else v
+                )
         else:
             df = pd.read_sql_query(query, self.db_conn)
 

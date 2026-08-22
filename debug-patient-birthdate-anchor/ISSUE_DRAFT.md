@@ -13,19 +13,32 @@ There are two consequences, one narrow and unrecoverable, one broad:
   published `birthDate` is wrong by whole years — by as much as **13**.
 - On **118,225 of 431,231 admissions (27.4%)**, a consumer computing a
   conventional elapsed-time age gets a different answer again, because the
-  synthetic birthday's month and day are copied from an unrelated admission
+  synthetic birthday's month and day are copied from an unrelated transfer
   event.
 
 Both are fixed by one line. I found this while porting the official
 `mimic-code` derived concepts onto MIMIC-on-FHIR and hitting a concept I could
 not reproduce.
 
+**Relates to #117 ("Anchor Years"), open since July 2024.** That issue reports
+that `anchor_year` is missing from the published data; this one shows what the
+omission costs, and that the value was not merely dropped but silently
+substituted. The fix proposed below closes both.
+
+The derivation is documented in the PhysioNet release notes, and I take the
+choice of `transfers.intime` to have been deliberate — but the reason given
+there is coverage of ED-only stays, weighed against `admissions.admittime`. The
+anchor pair is a third option that beats both on exactly that criterion, and it
+is the one MIMIC's own age definition uses. That comparison is in
+[The published rationale](#the-published-rationale-and-why-the-fix-satisfies-it-better)
+below.
+
 ## The mechanism
 
 MIMIC-IV publishes no date of birth. It publishes an anchor pair on
 `mimiciv_hosp.patients` — `anchor_age`, the patient's age in `anchor_year` —
 and `mimic-code` defines age from it, in
-`mimic-iv/concepts/demographics/age.sql:30`:
+[`mimic-iv/concepts/demographics/age.sql:30`](https://github.com/MIT-LCP/mimic-code/blob/8bcbd190ca75670cd5281f9ead3611ae1cefb73e/mimic-iv/concepts/demographics/age.sql#L30):
 
 ```sql
 pa.anchor_age + DATETIME_DIFF(ad.admittime, DATETIME(pa.anchor_year, 1, 1, 0, 0, 0), YEAR) AS age
@@ -64,11 +77,21 @@ and the resource records nothing that would let a consumer notice.
 
 ## Why this cannot be repaired downstream
 
-`anchor_age` survives — it is `year(MIN(transfers.intime)) − year(birthDate)`,
-and the transfer history is published as `Encounter.location[].period.start`
-(`sql/fhir_encounter.sql:11-25`). `anchor_year` does not survive in any form.
-It appears nowhere in `sql/` outside `fhir_patient.sql:15,33`, is carried by no
-element and no extension, and is not a function of any published timestamp.
+`anchor_age` is *mostly* recoverable — it is
+`year(MIN(transfers.intime)) − year(birthDate)`, and the transfer history is
+published as `Encounter.location[].period.start`
+(`sql/fhir_encounter.sql:7-25`). Not exactly, though: that array is built
+`GROUP BY hadm_id` from rows with `careunit IS NOT NULL`, so transfers carrying
+no `hadm_id` — ED-only stays, the very rows the birth date rationale was chosen
+to cover — attach to no hospital `Encounter`, and a consumer's earliest
+published location can therefore postdate the `MIN(tfs.intime)` the ETL
+actually used. On the 100-patient demo build that gap changes the recovered
+year for 2 patients.
+
+`anchor_year` does not survive in any form. The string `anchor_year` appears
+nowhere in `sql/` at all — only `anchor_year_group`, once, in the demo cohort
+filter at `fhir_etl/subjects.sql:16`. It is carried by no element and no
+extension, and is not a function of any published timestamp.
 
 I swept the six candidate identities a consumer could build from the timestamps
 MIMIC-on-FHIR does publish. On full MIMIC-IV v2.2:
@@ -94,6 +117,14 @@ that is missing. The great majority of published ages are right — but which
 ones cannot be determined from the published data, so none of them can be
 relied on individually.
 
+This half of the problem is already on the tracker: **#117, "Anchor Years"**
+("anchor years missing in data"), open since July 2024 and unanswered. That
+issue reports the absence; this one measures what the absence costs and shows
+that the value was silently substituted rather than merely omitted. The fix
+below closes both — once `birthDate` reproduces the anchor pair exactly, a
+consumer holding the resource can evaluate (1) without needing `anchor_year`
+itself — so the two are worth resolving together rather than separately.
+
 ## Worked example
 
 One subject in the full dataset (identifier withheld) has an earliest transfer
@@ -116,12 +147,18 @@ The worst case is a subject whose first transfer precedes their anchor year by
 | fact | count |
 |---|---|
 | patients given a `Patient` resource | 299,712 |
+| …of those, with ≥1 hospital admission (the scored population) | 180,733 |
 | admissions scored | 431,231 |
 | **calendar-year age wrong** | **460 (0.107%)** |
-| …patients affected | 87 |
+| …patients affected | 87 (0.048% of the scored population) |
 | …error range, years | −3 … **+13** |
 | **elapsed-time age wrong** | **118,225 (27.42%)** |
-| …patients affected | 47,899 |
+| …patients affected | 47,899 (26.5% of the scored population) |
+
+(Patient-level rates are quoted against the 180,733 patients who have an
+admission to score. The other 118,979 `Patient` resources carry the same
+defective birth date; they simply have no `admissions` row to measure it
+against here.)
 
 The error is per-patient and repeats across every one of that patient's stays,
 which is why 87 patients account for 460 admissions. It skews strongly positive
@@ -166,10 +203,13 @@ Four concepts read `mimiciv_derived.age`:
 
 | concept | how `age` is used | admissions whose output changes |
 |---|---|---|
-| `comorbidity/charlson.sql:353-357` | age bands 50/60/70/80 → `age_score`, added into `charlson_comorbidity_index` | **61** (31 patients) |
-| `score/sapsii.sql:373-379` | age bands 40/60/70/75/80 → `age_score`, added into `sapsii` and `sapsii_prob` | **69** (34 patients) |
-| `score/oasis.sql:144-150` | age bands 24/53/77/89/90 → `age_score`, added into `oasis` and `oasis_prob` | **39** (28 patients) |
-| `measurement/creatinine_baseline.sql:12-26` | `age` enters `mdrd_est` continuously | **460** `mdrd_est` rows |
+| [`comorbidity/charlson.sql:353-357`](https://github.com/MIT-LCP/mimic-code/blob/8bcbd190ca75670cd5281f9ead3611ae1cefb73e/mimic-iv/concepts/comorbidity/charlson.sql#L353-L357) | age bands 50/60/70/80 → `age_score`, added into `charlson_comorbidity_index` | **61** (31 patients) |
+| [`score/sapsii.sql:373-379`](https://github.com/MIT-LCP/mimic-code/blob/8bcbd190ca75670cd5281f9ead3611ae1cefb73e/mimic-iv/concepts/score/sapsii.sql#L373-L379) | age bands 40/60/70/75/80 → `age_score`, added into `sapsii` and `sapsii_prob` | **69** (34 patients) |
+| [`score/oasis.sql:144-150`](https://github.com/MIT-LCP/mimic-code/blob/8bcbd190ca75670cd5281f9ead3611ae1cefb73e/mimic-iv/concepts/score/oasis.sql#L144-L150) | age bands 24/53/77/89/90 → `age_score`, added into `oasis` and `oasis_prob` | **39** (28 patients) |
+| [`measurement/creatinine_baseline.sql:12-26`](https://github.com/MIT-LCP/mimic-code/blob/8bcbd190ca75670cd5281f9ead3611ae1cefb73e/mimic-iv/concepts/measurement/creatinine_baseline.sql#L12-L26) | `age` enters `mdrd_est` continuously | **460** `mdrd_est` rows |
+
+(Links are permalinked to `mimic-code` `8bcbd19`, current `main` at the time of
+writing, so the line ranges stay valid.)
 
 The banded scores absorb most of the error — only ages that cross a band
 boundary move — but `creatinine_baseline` has no bands: `age` is a continuous
@@ -182,19 +222,45 @@ point for patients a consumer cannot identify.
 any rows — 0 added, 0 dropped — because the affected patients are all well
 clear of 18. It could, on other data.)
 
-## This is not a modelling constraint — the value was available
+## The published rationale, and why the fix satisfies it better
 
-`anchor_year` is already in scope where the birth date is built. The CTE reads
-`mimiciv_hosp.patients` and groups by `pat.anchor_age` at `fhir_patient.sql:33`;
-`pat.anchor_year` sits in the same row and is simply not referenced. Nothing
-about FHIR, the profile, or the source schema forced the substitution.
+The choice is documented, so let me address it directly. The
+[MIMIC-IV on FHIR v2.1 release notes](https://physionet.org/content/mimic-iv-fhir/2.1/)
+state, under `MimicPatient`:
 
-`git log -L15,15:sql/fhir_patient.sql` returns two commits — `63a7429`
-(December 2021, the file's first version) and `f907206` (January 2022), which
-only rewrote `::DATE` casts as `CAST(... AS DATE)`. The expression has never
-been revisited on its merits. This reads as an early choice that predates the
-`mimic-code` concept library being ported against it, rather than a decision
-anyone would make again.
+> The intime column of the transfers table was used as a base for the birthdate
+> calculation versus using the admittime column of the admissions table, since
+> the admittime column is only available for hospitalized patients (i.e. it
+> excludes ED only stays).
+
+That is a deliberate decision, and on its own terms a correct one — but the
+question it settles is *which event timestamp to anchor to*, and the criterion
+it uses is **coverage**. Both candidates it weighs are event timestamps; the
+anchor pair is not among them, and `anchor_year` is not mentioned anywhere in
+the release notes.
+
+The proposed fix wins on that same criterion. `anchor_year` sits on
+`mimiciv_hosp.patients` — one row per patient, populated for every patient,
+including ED-only ones. It has strictly better coverage than either timestamp
+considered, and it needs no join at all: today `fhir_patient.sql` `INNER JOIN`s
+`transfers` to build the birth date, so a patient with no transfer row silently
+gets no `birthDate`. Anchoring to the patient row removes that dependency.
+
+`anchor_year` is also already in scope where the birth date is built: the CTE
+reads `mimiciv_hosp.patients` and groups by `pat.anchor_age` at
+`fhir_patient.sql:33`; `pat.anchor_year` sits in the same row and is simply not
+referenced. Nothing about FHIR, the profile, or the source schema forced the
+substitution.
+
+`git log -L15,15:sql/fhir_patient.sql` returns three commits — `63a7429`
+(2021-12-06, the file's first version), `8e9344e` (2021-12-15, reformatting)
+and `f907206` (2022-01-05, which only rewrote `::DATE` casts as
+`CAST(... AS DATE)`). The expression's semantics have never been revisited.
+This reads as an early choice made before the `mimic-code` concept library was
+ported against it, rather than one that was weighed against the anchor pair and
+rejected.
+
+Nor is the value's absence news to consumers: #117 asked for it two years ago.
 
 ## Reproduction
 
@@ -235,9 +301,54 @@ That query returns **460 admissions across 87 patients**. I ran the canonical
 side against `mimiciv_derived.age` first and it agrees on all 431,231 rows, so
 the disagreement above is the ETL's, not a mis-transcribed formula.
 
-The full script — the identity sweep, the elapsed-time comparison and the
-downstream projections — is a single file whose only real dependency is
-`duckdb`, and I am happy to attach it or open it as a PR alongside the fix.
+The second failure needs one more query. This one computes age the way a date
+library does — completed years by the anniversary rule — and compares it to the
+same canonical age:
+
+```sql
+-- tier 2: the elapsed-time age a conventional consumer computes
+WITH t AS (
+    SELECT subject_id, MIN(intime) AS min_intime
+    FROM read_csv('mimic-iv-2.2/hosp/transfers.csv.gz', header = true)
+    GROUP BY subject_id
+), pp AS (
+    SELECT p.subject_id, p.anchor_age, p.anchor_year
+         , CAST(CAST(t.min_intime AS DATE)
+                - CAST(p.anchor_age || ' years' AS INTERVAL) AS DATE) AS birth_date
+    FROM read_csv('mimic-iv-2.2/hosp/patients.csv.gz', header = true) p
+    JOIN t USING (subject_id)
+), scored AS (
+    SELECT
+        YEAR(a.admittime) - YEAR(pp.birth_date)
+          - CASE WHEN (MONTH(a.admittime), DAY(a.admittime))
+                     < (MONTH(pp.birth_date), DAY(pp.birth_date))
+                 THEN 1 ELSE 0 END                            AS age_elapsed
+      , pp.anchor_age + (YEAR(a.admittime) - pp.anchor_year)  AS age_canonical
+      , a.subject_id
+    FROM read_csv('mimic-iv-2.2/hosp/admissions.csv.gz', header = true) a
+    JOIN pp USING (subject_id)
+)
+SELECT count(*)                                                   AS admissions
+     , count(*) FILTER (WHERE age_elapsed <> age_canonical)       AS wrong
+     , count(DISTINCT subject_id)
+         FILTER (WHERE age_elapsed <> age_canonical)              AS patients
+FROM scored;
+```
+
+**118,225 wrong of 431,231, across 47,899 patients.** Swap `birth_date` for the
+fixed expression (`MAKE_DATE(anchor_year, 1, 1) - anchor_age years`) in both
+queries and the first returns no rows, the second reports `wrong = 0`.
+
+Note the anniversary rule rather than `floor(days / 365.2425)`: the latter
+accumulates enough drift to undershoot by a year at high ages against a
+1 January birth date, which will make a correct fix look like it leaves a
+residual. That bit me on a first run before I switched to the rule above.
+
+The full script — the identity sweep, the six-candidate `anchor_year` recovery
+sweep, the cross-check against `mimiciv_derived.age` and the downstream concept
+projections — is a single file whose only real dependency is `duckdb`. The two
+queries here cover both headline figures without it, but I am happy to provide
+it or open it as a PR alongside the fix.
 
 ## Suggested fix
 
@@ -252,6 +363,14 @@ already in the query:
 
 adding `pat.anchor_year` to the `GROUP BY` at line 33.
 
+Scope of the change: it **replaces the value of an existing element**. No new
+column in `mimic_fhir.patient` (still `id` + `fhir`), no new element or
+extension in the resource, no profile or terminology change —
+`Patient.birthDate` keeps its type, precision and cardinality, and
+`pat.anchor_year` enters only as a grouping key in the CTE. The cost is that
+the values differ from those already released on PhysioNet, so it lands with a
+data re-release rather than silently.
+
 Verified on full MIMIC-IV v2.2: after this change, ages computed from
 `Patient.birthDate` match `mimiciv_derived.age` exactly — **0 / 431,231
 admissions wrong under calendar-year subtraction, and 0 / 431,231 wrong under
@@ -263,34 +382,28 @@ coincide for every event date, so the two consumers described above can no
 longer disagree. Choosing any other day would fix tier 1 and leave tier 2 in
 place.
 
+To be explicit about what "fixing" tier 2 can and cannot mean: **no true month
+and day exists anywhere in MIMIC-IV to restore.** Deidentification destroyed
+it, and for patients over 89 in their anchor year even the age is a sentinel
+(`anchor_age = 91`). So the month and day cannot be made *correct*; they can
+only be made *non-misleading*. Today they carry the month and day of an
+unrelated transfer, which looks like information and is not. Under the fix they
+carry the one convention that makes both standard age computations agree with
+MIMIC's own definition — the same convention OMOP uses when only a birth year
+is known.
+
+The honest alternative is a year-only `birthDate`. FHIR `date` permits `YYYY`
+precision, so `"birthDate": "2118"` would state exactly what is known and no
+more. I did not propose it because it changes the element's precision for every
+existing consumer and leaves elapsed-time age undefined rather than merely
+consistent — but if the maintainers prefer declared imprecision over a
+convention, it is a defensible choice and it also resolves tier 2. What is not
+defensible is the status quo, where full day precision is published for a day
+that means nothing.
+
 Both birth dates are synthetic — MIMIC has no real one to publish. The
 difference is that this one reproduces MIMIC's own definition of age exactly,
 and the current one reproduces no defined quantity at all.
-
-### Alternative, if changing published values is unwelcome
-
-Changing `birthDate` changes data in already-released resources, which may not
-be acceptable. Carrying the anchor pair as an extension on `Patient` would also
-resolve the unrecoverability — a consumer could then evaluate (1) directly:
-
-```jsonc
-"extension": [{
-  "url": "http://mimic.mit.edu/fhir/mimic/StructureDefinition/patient-anchor",
-  "extension": [
-    { "url": "anchorAge",  "valueInteger": 91 },
-    { "url": "anchorYear", "valueInteger": 2165 }
-  ]
-}]
-```
-
-This is purely additive and invisible to existing consumers. It does leave the
-published `birthDate` misleading for the elapsed-time case, so my preference is
-the one-line fix, or both.
-
-I would also accept `anchor_year_group` being dropped from any such extension —
-it is a real-world calendar bucket and date shifting is precisely the operation
-that destroys the mapping to it, so unlike the anchor pair it genuinely cannot
-be represented.
 
 ### One thing to decide
 
@@ -300,7 +413,7 @@ On MIMIC-IV v2.2 this does not happen: **0 patients**, and 0 admissions have a
 negative canonical age. Worth knowing the case exists rather than discovering
 it on a future release.
 
-Happy to open a PR for whichever direction is preferred.
+Happy to open a PR for the fix.
 
 ---
 

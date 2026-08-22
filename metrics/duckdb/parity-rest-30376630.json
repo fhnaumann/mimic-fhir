@@ -1,0 +1,914 @@
+{
+  "a": "$SCRATCH/psql-baseline/out/mimic4-export",
+  "b": "$SCRATCH/duckdb-port/fhir-gzip-par",
+  "missing_from_a": [],
+  "missing_from_b": [],
+  "resources": {
+    "MimicCondition": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicCondition.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicCondition.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 4756326,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 4756326,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 4756326,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicConditionED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicConditionED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicConditionED.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 899050,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 899050,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 899050,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicEncounter": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicEncounter.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicEncounter.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 431231,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 431231,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 431231,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 17579,
+      "differing_ids_sample": [
+        "<non-demo resource id>",
+        "<non-demo resource id>",
+        "<non-demo resource id>"
+      ],
+      "kinds": {
+        "array_order": 17579
+      },
+      "histogram": [
+        {
+          "kind": "array_order",
+          "path": "$.type",
+          "count": 17579
+        }
+      ],
+      "examples": {
+        "array_order $.type": [
+          {
+            "id": "<non-demo resource id>",
+            "detail": "6 elements reordered",
+            "path": "$.type"
+          },
+          {
+            "id": "<non-demo resource id>",
+            "detail": "5 elements reordered",
+            "path": "$.type"
+          },
+          {
+            "id": "<non-demo resource id>",
+            "detail": "2 elements reordered",
+            "path": "$.type"
+          }
+        ]
+      },
+      "ignored": {},
+      "identical": false
+    },
+    "MimicEncounterED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicEncounterED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicEncounterED.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 425087,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 425087,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 425087,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicEncounterICU": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicEncounterICU.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicEncounterICU.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 73181,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 73181,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 73181,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicLocation": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicLocation.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicLocation.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 39,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 39,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 39,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedication": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedication.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedication.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 19689,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 19689,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 19689,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedicationAdministration": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationAdministration.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationAdministration.ndjson.gz",
+      "strategy": "digest",
+      "stats_a": {
+        "lines": 27754178,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 27754178,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 27754178,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 20,
+      "differing_ids_sample": [
+        "<non-demo resource id>",
+        "<non-demo resource id>",
+        "<non-demo resource id>"
+      ],
+      "kinds": {
+        "value": 20
+      },
+      "histogram": [
+        {
+          "kind": "value",
+          "path": "$.dosage.dose.value",
+          "count": 20
+        }
+      ],
+      "examples": {
+        "value $.dosage.dose.value": [
+          {
+            "id": "<non-demo resource id>",
+            "detail": "100000303380049042 vs 100000303380049040",
+            "path": "$.dosage.dose.value"
+          },
+          {
+            "id": "<non-demo resource id>",
+            "detail": "74.99999999999999999 vs 75",
+            "path": "$.dosage.dose.value"
+          },
+          {
+            "id": "<non-demo resource id>",
+            "detail": "74.99999999999999999 vs 75",
+            "path": "$.dosage.dose.value"
+          }
+        ]
+      },
+      "ignored": {},
+      "identical": false
+    },
+    "MimicMedicationAdministrationICU": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationAdministrationICU.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationAdministrationICU.ndjson.gz",
+      "strategy": "digest",
+      "stats_a": {
+        "lines": 8978893,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 8978893,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 8978893,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedicationDispense": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationDispense.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationDispense.ndjson.gz",
+      "strategy": "digest",
+      "stats_a": {
+        "lines": 12689766,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 12689766,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 12689766,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedicationDispenseED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationDispenseED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationDispenseED.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 1586053,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 1586053,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 1586053,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedicationMix": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationMix.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationMix.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 6338,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 6338,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 6338,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedicationRequest": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationRequest.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationRequest.ndjson.gz",
+      "strategy": "digest",
+      "stats_a": {
+        "lines": 15416901,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 15416901,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 15416901,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicMedicationStatementED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicMedicationStatementED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicMedicationStatementED.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 2598365,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 2598365,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 2598365,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 187587,
+      "differing_ids_sample": [
+        "<non-demo resource id>",
+        "<non-demo resource id>",
+        "<non-demo resource id>"
+      ],
+      "kinds": {
+        "array_order": 187587
+      },
+      "histogram": [
+        {
+          "kind": "array_order",
+          "path": "$.medicationCodeableConcept.coding",
+          "count": 187587
+        }
+      ],
+      "examples": {
+        "array_order $.medicationCodeableConcept.coding": [
+          {
+            "id": "<non-demo resource id>",
+            "detail": "4 elements reordered",
+            "path": "$.medicationCodeableConcept.coding"
+          },
+          {
+            "id": "<non-demo resource id>",
+            "detail": "4 elements reordered",
+            "path": "$.medicationCodeableConcept.coding"
+          },
+          {
+            "id": "<non-demo resource id>",
+            "detail": "4 elements reordered",
+            "path": "$.medicationCodeableConcept.coding"
+          }
+        ]
+      },
+      "ignored": {},
+      "identical": false
+    },
+    "MimicObservationDatetimeevents": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationDatetimeevents.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationDatetimeevents.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 7112999,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 7112999,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 7112999,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicObservationED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationED.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 4404481,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 4404481,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 4404481,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicObservationMicroOrg": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationMicroOrg.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationMicroOrg.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 289928,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 289928,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 289928,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {
+        "$.hasMember": 109042
+      },
+      "identical": true
+    },
+    "MimicObservationMicroSusc": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationMicroSusc.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationMicroSusc.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 1107278,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 1107278,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 1107278,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicObservationMicroTest": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationMicroTest.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationMicroTest.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 2184371,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 2184371,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 2184371,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {
+        "$.hasMember": 18570
+      },
+      "identical": true
+    },
+    "MimicObservationOutputevents": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationOutputevents.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationOutputevents.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 4234967,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 4234967,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 4234967,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicObservationVitalSignsED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicObservationVitalSignsED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicObservationVitalSignsED.ndjson.gz",
+      "strategy": "digest",
+      "stats_a": {
+        "lines": 9948485,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 9948485,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 9948485,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicOrganization": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicOrganization.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicOrganization.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 1,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 1,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 1,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicPatient": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicPatient.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicPatient.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 299712,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 299712,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 299712,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicProcedure": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicProcedure.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicProcedure.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 669186,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 669186,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 669186,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicProcedureED": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicProcedureED.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicProcedureED.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 1989697,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 1989697,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 1989697,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicProcedureICU": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicProcedureICU.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicProcedureICU.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 696092,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 696092,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 696092,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicSpecimen": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicSpecimen.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicSpecimen.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 1587215,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 1587215,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 1587215,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    },
+    "MimicSpecimenLab": {
+      "file_a": "$SCRATCH/psql-baseline/out/mimic4-export/MimicSpecimenLab.ndjson",
+      "file_b": "$SCRATCH/duckdb-port/fhir-gzip-par/MimicSpecimenLab.ndjson.gz",
+      "strategy": "in-memory",
+      "stats_a": {
+        "lines": 13376689,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "stats_b": {
+        "lines": 13376689,
+        "blank": 0,
+        "duplicate_ids": 0,
+        "missing_id": 0,
+        "parse_errors": 0
+      },
+      "common": 13376689,
+      "only_a": [],
+      "only_b": [],
+      "differing_resources": 0,
+      "differing_ids_sample": [],
+      "kinds": {},
+      "histogram": [],
+      "examples": {},
+      "ignored": {},
+      "identical": true
+    }
+  }
+}

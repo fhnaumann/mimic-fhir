@@ -17,6 +17,14 @@ dependencies:
   - google-cloud-storage
   - pip
   - pip:
+    # DuckDB port (duckdb/): transpile.py rewrites sql/**.sql at build time and
+    # validates the result against DuckDB's own parser. sqlglot is pinned because
+    # the rewriter depends on specific AST shapes -- notably that a schema-qualified
+    # call parses as Dot(Identifier, Anonymous) and that array subscripts are stored
+    # 0-based. Both are unversioned internals; re-run duckdb/transpile.py after any
+    # bump and check the rule counts in HANDOFF.md 4.1 still match.
+    - sqlglot==30.17.0
+    - duckdb
     - python-dotenv
     - fhir.resources
     - google-cloud-bigquery

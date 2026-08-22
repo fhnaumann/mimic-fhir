@@ -68,6 +68,7 @@ there.
 | demo-build smoke run | done — cross-check 0/275; tier 1 invisible on demo, so not evidence |
 | full-cohort HPC run | done — job `29971523` |
 | issue draft | complete, all figures filled from `job-29971523` |
+| pre-filing review | done — see "Pre-filing review" in the working doc; draft now addresses the documented PhysioNet rationale and cross-refs upstream #117 |
 
 The demo build cannot show the headline defect: all 100 demo patients happen to
 satisfy `year(MIN(transfers.intime)) == anchor_year`, so tier 1 measures 0

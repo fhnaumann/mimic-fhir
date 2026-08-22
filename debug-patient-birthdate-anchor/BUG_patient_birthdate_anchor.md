@@ -216,9 +216,9 @@ transfer:
 groups by `pat.anchor_age` at line 33; the fix adds `pat.anchor_year` to that
 `GROUP BY`.
 
-Verified on the demo build: **0 wrong under calendar-year subtraction and 0
-wrong under elapsed-time computation**, i.e. the fix closes tier 2 as well as
-tier 1. That second property is why January 1 is the right day rather than an
+Verified on the full cohort (`job-29971523`, and on the demo build before it):
+**0 / 431,231 wrong under calendar-year subtraction and 0 / 431,231 wrong under
+the elapsed-time computation**, i.e. the fix closes tier 2 as well as tier 1. That second property is why January 1 is the right day rather than an
 arbitrary one — with a 1 January birthday the two age computations coincide for
 every event date, so a consumer cannot get a different answer by computing age
 the ordinary way.
@@ -228,11 +228,18 @@ MIMIC's own definition of age exactly, and the current one reproduces nothing.
 
 ### Open questions for the maintainers
 
-- Changing `birthDate` changes values in already-published resources. Whether
-  that is acceptable, or whether the anchor pair should instead be added as an
-  extension alongside the existing `birthDate`, is theirs to decide. The
-  extension route also fixes tier 1 (a consumer can then compute (1) directly)
-  but leaves the published `birthDate` misleading for tier 2.
+- Changing `birthDate` changes values in already-published resources, so the
+  fix lands with a data re-release rather than silently. Stated in the issue as
+  the cost of the fix, not offered as a reason to hesitate.
+  (An earlier draft offered a second route — carry `anchor_age`/`anchor_year`
+  as a `Patient` extension and leave `birthDate` alone. **Dropped from the
+  report**: it fixes only tier 1, leaves the published `birthDate` just as
+  misleading for tier 2, and is not a one-line change — it needs a
+  `StructureDefinition` in `mimic-profiles`, wiring into
+  `fhir_etl.fn_patient_extension`, and an IG regeneration, or validation
+  reports the extension as unresolvable, as in upstream #97. Offering it
+  alongside the real fix only invited the weaker option. Recorded here in case
+  a maintainer raises it.)
 - `fhir_patient.sql` reads `mimiciv_hosp.patients` directly, so a full build
   includes `anchor_age = 0` patients (`fhir_etl/subjects.sql` is the 100-subject
   *demo* cohort builder — note its `LIMIT 100` — not a filter on the full
@@ -242,6 +249,66 @@ MIMIC's own definition of age exactly, and the current one reproduces nothing.
   a negative age for exactly those rows, and the fix reproduces the oracle
   faithfully, oddities included. Worth reporting the count so the maintainers
   can decide whether to clamp.
+
+## Pre-filing review (2026-08-17)
+
+What was checked before the issue goes up. Everything here changed the draft.
+
+**The derivation is documented and was deliberate — as to the timestamp, not
+the anchor.** The [MIMIC-IV on FHIR v2.1 release
+notes](https://physionet.org/content/mimic-iv-fhir/2.1/) say under
+`MimicPatient`: *"The intime column of the transfers table was used as a base
+for the birthdate calculation versus using the admittime column of the
+admissions table, since the admittime column is only available for hospitalized
+patients (i.e. it excludes ED only stays)."* So the maintainers weighed
+`transfers.intime` against `admissions.admittime` on a **coverage** criterion
+and picked correctly between them. `anchor_year` is not mentioned in the
+release notes at all. The draft now leads with this rather than being ambushed
+by it, and argues the fix wins on the maintainers' own criterion:
+`anchor_year` is on the patient row, so it covers ED-only patients *and*
+patients with no `transfers` row (whom the current `INNER JOIN` leaves with no
+`birthDate` at all).
+
+**Prior art upstream: #117 "Anchor Years" — "anchor years missing in data",
+open since 2024-07-15, no replies.** Consumer-side report of the same missing
+value. Now cross-referenced.
+
+**`anchor_year` never appears in `sql/`.** The draft said it appeared at
+`fhir_patient.sql:15,33` — those are `anchor_age`. Only `anchor_year_group`
+occurs, once, at `fhir_etl/subjects.sql:16`. Corrected; the claim is stronger
+than it was written.
+
+**`anchor_age` is not cleanly recoverable either.** The draft asserted it
+survives as `year(MIN(transfers.intime)) − year(birthDate)` via
+`Encounter.location[].period.start`. But `transfer_locations` is built
+`GROUP BY hadm_id` over `careunit IS NOT NULL`, so transfers with a NULL
+`hadm_id` (ED-only) reach no hospital `Encounter`. Measured on the demo build:
+the `careunit` filter never moves the per-patient minimum (the NULL-careunit
+rows are all `eventtype = 'discharge'`, never earliest), but the missing
+`hadm_id` rows move it for 4/100 patients and move the *year* for 2/100.
+Softened accordingly. **Not yet measured on full data** — worth a column in the
+next run if this is ever re-run.
+
+**Tier 2 is now reproducible from the issue text alone.** The draft previously
+carried a standalone query for tier 1 only, leaving its largest figure
+(118,225 admissions) resting on "trust the script". Added a second self-contained
+DuckDB query using the anniversary rule, plus a note on why *not* to use
+`floor(days / 365.2425)` — the `29971161` artefact, stated up front so a
+maintainer reproducing this does not rediscover it and conclude the fix leaves a
+residual. Validated against the demo build before going in the draft: returns
+101/275 (36.73%), 30 patients, error −1..0, matching the demo smoke run exactly.
+
+Decided against attaching the script itself. The two inline queries now cover
+both headline numbers with no dependencies, whereas the script's extra reach —
+the oracle cross-check and the concept projections — needs a prebuilt
+`mimiciv_derived` that a reader will not have, so attaching it mostly invites
+review of the measurement instead of the defect. The offer stays in the issue;
+it goes in the PR if they engage.
+
+Also noted, for anyone reading the CSVs alongside the issue: `error_years` in
+`affected_patients.csv` is `year_min_intime − anchor_year`, the negative of the
+`published − canonical` convention used in `report.txt` and the issue. Same
+magnitudes, opposite sign.
 
 ## Notes for whoever runs this
 

@@ -1,0 +1,5 @@
+-- Sourced via PSQLRC by hpc/psql/run_psql_step.sh.
+-- Turns on per-statement timing so the \echo markers in create_fhir_tables.sql
+-- yield a per-resource cost breakdown in the job log, without editing any SQL
+-- that is part of the mapping pipeline.
+\timing on

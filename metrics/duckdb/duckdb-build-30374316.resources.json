@@ -1,0 +1,280 @@
+{
+  "compression": "gzip",
+  "threads": 8,
+  "memory_limit": "29491MB",
+  "resources": [
+    {
+      "view": "v_condition",
+      "file": "MimicCondition.ndjson.gz",
+      "rows": 4756326,
+      "seconds": 224.76,
+      "bytes": 300878561,
+      "verify_seconds": 4.28,
+      "table": "condition"
+    },
+    {
+      "view": "v_condition_ed",
+      "file": "MimicConditionED.ndjson.gz",
+      "rows": 899050,
+      "seconds": 43.11,
+      "bytes": 71160893,
+      "verify_seconds": 1.04,
+      "table": "condition_ed"
+    },
+    {
+      "view": "v_encounter",
+      "file": "MimicEncounter.ndjson.gz",
+      "rows": 431231,
+      "seconds": 12.4,
+      "bytes": 52373432,
+      "verify_seconds": 0.85,
+      "table": "encounter"
+    },
+    {
+      "view": "v_encounter_ed",
+      "file": "MimicEncounterED.ndjson.gz",
+      "rows": 425087,
+      "seconds": 7.33,
+      "bytes": 33541984,
+      "verify_seconds": 0.55,
+      "table": "encounter_ed"
+    },
+    {
+      "view": "v_encounter_icu",
+      "file": "MimicEncounterICU.ndjson.gz",
+      "rows": 73181,
+      "seconds": 1.44,
+      "bytes": 7502596,
+      "verify_seconds": 0.11,
+      "table": "encounter_icu"
+    },
+    {
+      "view": "v_location",
+      "file": "MimicLocation.ndjson.gz",
+      "rows": 39,
+      "seconds": 0.06,
+      "bytes": 1768,
+      "verify_seconds": 0.0,
+      "table": "location"
+    },
+    {
+      "view": "v_medication",
+      "file": "MimicMedication.ndjson.gz",
+      "rows": 19689,
+      "seconds": 1.06,
+      "bytes": 1082103,
+      "verify_seconds": 0.04,
+      "table": "medication"
+    },
+    {
+      "view": "v_medication_administration",
+      "file": "MimicMedicationAdministration.ndjson.gz",
+      "rows": 27754178,
+      "seconds": 403.64,
+      "bytes": 1278309632,
+      "verify_seconds": 23.22,
+      "table": "medication_administration"
+    },
+    {
+      "view": "v_medication_administration_icu",
+      "file": "MimicMedicationAdministrationICU.ndjson.gz",
+      "rows": 8978893,
+      "seconds": 121.82,
+      "bytes": 499606907,
+      "verify_seconds": 10.03,
+      "table": "medication_administration_icu"
+    },
+    {
+      "view": "v_medication_dispense",
+      "file": "MimicMedicationDispense.ndjson.gz",
+      "rows": 12689766,
+      "seconds": 226.44,
+      "bytes": 1290918021,
+      "verify_seconds": 18.54,
+      "table": "medication_dispense"
+    },
+    {
+      "view": "v_medication_dispense_ed",
+      "file": "MimicMedicationDispenseED.ndjson.gz",
+      "rows": 1586053,
+      "seconds": 14.98,
+      "bytes": 75657340,
+      "verify_seconds": 1.13,
+      "table": "medication_dispense_ed"
+    },
+    {
+      "view": "v_medication_mix",
+      "file": "MimicMedicationMix.ndjson.gz",
+      "rows": 6338,
+      "seconds": 35.63,
+      "bytes": 607734,
+      "verify_seconds": 0.19,
+      "table": "medication_mix"
+    },
+    {
+      "view": "v_medication_request",
+      "file": "MimicMedicationRequest.ndjson.gz",
+      "rows": 15416901,
+      "seconds": 241.55,
+      "bytes": 1074531090,
+      "verify_seconds": 18.24,
+      "table": "medication_request"
+    },
+    {
+      "view": "v_medication_statement_ed",
+      "file": "MimicMedicationStatementED.ndjson.gz",
+      "rows": 2598365,
+      "seconds": 45.96,
+      "bytes": 294312959,
+      "verify_seconds": 3.88,
+      "table": "medication_statement_ed"
+    },
+    {
+      "view": "v_observation_chartevents",
+      "file": "MimicObservationChartevents.ndjson.gz",
+      "rows": 313645032,
+      "seconds": 5796.94,
+      "bytes": 18094552807,
+      "verify_seconds": 282.8,
+      "table": "observation_chartevents"
+    },
+    {
+      "view": "v_observation_datetimeevents",
+      "file": "MimicObservationDatetimeevents.ndjson.gz",
+      "rows": 7112999,
+      "seconds": 63.64,
+      "bytes": 250735558,
+      "verify_seconds": 4.75,
+      "table": "observation_datetimeevents"
+    },
+    {
+      "view": "v_observation_ed",
+      "file": "MimicObservationED.ndjson.gz",
+      "rows": 4404481,
+      "seconds": 67.22,
+      "bytes": 345879918,
+      "verify_seconds": 4.57,
+      "table": "observation_ed"
+    },
+    {
+      "view": "v_observation_labevents",
+      "file": "MimicObservationLabevents.ndjson.gz",
+      "rows": 118171367,
+      "seconds": 2421.81,
+      "bytes": 7866549293,
+      "verify_seconds": 146.79,
+      "table": "observation_labevents"
+    },
+    {
+      "view": "v_observation_micro_org",
+      "file": "MimicObservationMicroOrg.ndjson.gz",
+      "rows": 289928,
+      "seconds": 8.39,
+      "bytes": 55247454,
+      "verify_seconds": 0.67,
+      "table": "observation_micro_org"
+    },
+    {
+      "view": "v_observation_micro_susc",
+      "file": "MimicObservationMicroSusc.ndjson.gz",
+      "rows": 1107278,
+      "seconds": 13.88,
+      "bytes": 50054216,
+      "verify_seconds": 1.13,
+      "table": "observation_micro_susc"
+    },
+    {
+      "view": "v_observation_micro_test",
+      "file": "MimicObservationMicroTest.ndjson.gz",
+      "rows": 2184371,
+      "seconds": 39.91,
+      "bytes": 280147995,
+      "verify_seconds": 3.35,
+      "table": "observation_micro_test"
+    },
+    {
+      "view": "v_observation_outputevents",
+      "file": "MimicObservationOutputevents.ndjson.gz",
+      "rows": 4234967,
+      "seconds": 41.52,
+      "bytes": 164143427,
+      "verify_seconds": 3.51,
+      "table": "observation_outputevents"
+    },
+    {
+      "view": "v_observation_vital_signs",
+      "file": "MimicObservationVitalSignsED.ndjson.gz",
+      "rows": 9948485,
+      "seconds": 157.26,
+      "bytes": 778068704,
+      "verify_seconds": 12.38,
+      "table": "observation_vital_signs"
+    },
+    {
+      "view": "v_organization",
+      "file": "MimicOrganization.ndjson.gz",
+      "rows": 1,
+      "seconds": 0.21,
+      "bytes": 314,
+      "verify_seconds": 0.01,
+      "table": "organization"
+    },
+    {
+      "view": "v_patient",
+      "file": "MimicPatient.ndjson.gz",
+      "rows": 299712,
+      "seconds": 4.47,
+      "bytes": 13498075,
+      "verify_seconds": 0.32,
+      "table": "patient"
+    },
+    {
+      "view": "v_procedure",
+      "file": "MimicProcedure.ndjson.gz",
+      "rows": 669186,
+      "seconds": 7.48,
+      "bytes": 41980773,
+      "verify_seconds": 0.6,
+      "table": "procedure"
+    },
+    {
+      "view": "v_procedure_ed",
+      "file": "MimicProcedureED.ndjson.gz",
+      "rows": 1989697,
+      "seconds": 18.73,
+      "bytes": 95629555,
+      "verify_seconds": 1.45,
+      "table": "procedure_ed"
+    },
+    {
+      "view": "v_procedure_icu",
+      "file": "MimicProcedureICU.ndjson.gz",
+      "rows": 696092,
+      "seconds": 8.23,
+      "bytes": 34655892,
+      "verify_seconds": 0.64,
+      "table": "procedure_icu"
+    },
+    {
+      "view": "v_specimen",
+      "file": "MimicSpecimen.ndjson.gz",
+      "rows": 1587215,
+      "seconds": 16.58,
+      "bytes": 95694927,
+      "verify_seconds": 1.34,
+      "table": "specimen"
+    },
+    {
+      "view": "v_specimen_lab",
+      "file": "MimicSpecimenLab.ndjson.gz",
+      "rows": 13376689,
+      "seconds": 119.1,
+      "bytes": 741310201,
+      "verify_seconds": 9.58,
+      "table": "specimen_lab"
+    }
+  ],
+  "total_rows": 555352597,
+  "total_bytes": 33888634129,
+  "total_write_seconds": 10165.5
+}

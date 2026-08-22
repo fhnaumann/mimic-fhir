@@ -1,0 +1,46 @@
+{
+  "compression": "gzip",
+  "threads": 16,
+  "memory_limit": "19660MB",
+  "resources": [
+    {
+      "view": "v_medication_request",
+      "file": "MimicMedicationRequest.ndjson.gz",
+      "rows": 15416901,
+      "seconds": 380.16,
+      "bytes": 1850474752,
+      "verify_seconds": 21.9,
+      "table": "medication_request"
+    },
+    {
+      "view": "v_observation_datetimeevents",
+      "file": "MimicObservationDatetimeevents.ndjson.gz",
+      "rows": 7112999,
+      "seconds": 60.19,
+      "bytes": 250737154,
+      "verify_seconds": 4.2,
+      "table": "observation_datetimeevents"
+    },
+    {
+      "view": "v_patient",
+      "file": "MimicPatient.ndjson.gz",
+      "rows": 299712,
+      "seconds": 3.73,
+      "bytes": 13492663,
+      "verify_seconds": 0.25,
+      "table": "patient"
+    },
+    {
+      "view": "v_specimen_lab",
+      "file": "MimicSpecimenLab.ndjson.gz",
+      "rows": 13376689,
+      "seconds": 110.63,
+      "bytes": 696431185,
+      "verify_seconds": 8.58,
+      "table": "specimen_lab"
+    }
+  ],
+  "total_rows": 36206301,
+  "total_bytes": 2811135754,
+  "total_write_seconds": 554.7
+}

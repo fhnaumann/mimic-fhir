@@ -1,0 +1,19 @@
+{
+  "compression": "gzip",
+  "threads": 16,
+  "memory_limit": "58982MB",
+  "resources": [
+    {
+      "view": "v_patient",
+      "file": "MimicPatient.ndjson.gz",
+      "rows": 299712,
+      "seconds": 3.86,
+      "bytes": 13495103,
+      "verify_seconds": 0.33,
+      "table": "patient"
+    }
+  ],
+  "total_rows": 299712,
+  "total_bytes": 13495103,
+  "total_write_seconds": 3.9
+}

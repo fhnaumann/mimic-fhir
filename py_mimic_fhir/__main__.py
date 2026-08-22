@@ -174,7 +174,9 @@ def parse_arguments(arguments=None):
         '--db_mode',
         action=EnvDefault,
         envvar='DB_MODE',
-        help='Database mode, either Postgres or BigQuery',
+        help='Database mode: POSTGRES, BIGQUERY, or DUCKDB. For DUCKDB, pass the '
+             'database file path as --dbname_mimic; user/password/host/port are '
+             'ignored.',
         required=True
     )
 
