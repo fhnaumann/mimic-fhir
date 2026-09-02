@@ -32,6 +32,11 @@ Briefly, the steps to convert MIMIC-IV/MIMIC-IV-ED to FHIR are as follows:
 3. Download the MIMIC-IV/MIMIC-IV-ED data and load it into PostgreSQL
 4. Generate the FHIR tables by running [create_fhir_tables.sql](/sql/create_fhir_tables.sql)
 
+There is also a **DuckDB backend** that builds the same ndjson export from the
+same `sql/` mapping files, without a database server — it reads MIMIC-IV as
+Parquet instead. See [duckdb_etl/README.md](/duckdb_etl/README.md). The
+PostgreSQL path below remains the reference.
+
 ### Detailed instructions (Ubuntu)
 
 #### Install packages
