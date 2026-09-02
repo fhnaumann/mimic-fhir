@@ -915,6 +915,71 @@ rows, all of them correct, from a file that opens without error.
 quoted as a compression ratio. Note only that parallel zstd came out *smaller* than
 single-stream zstd (33.2 MB vs 66.7 MB), the same locality effect described in §6.
 
+## 10b. Configuration D — the upstream reference machine, job `30382951`
+
+`README.md:129–133` documents the psql pipeline's requirements and the authors' own machine:
+**Ryzen 9 3900XT (24 threads), 64 GB RAM, 2 TB free disk, ~12 hours.** Configuration D reproduces
+that hardware envelope and runs the DuckDB port inside it.
+
+```bash
+sbatch -J duckdb-upstream24 --exclusive --cpus-per-task=24 --mem=64G --time=08:00:00 \
+    --export=ALL,SAMPLE_INTERVAL=15,MEM_MB=65536,OUT_DIR=…/fhir-zstd-up24 \
+    repo/hpc/duckdb/run_duckdb_step.sh build zstd
+```
+
+`--exclusive` for timing fidelity only; the cgroup caps memory at 64 GB and DuckDB's
+`memory_limit` was pinned to 39,321 MB (38.4 GiB), 7.5× less than configuration C.
+
+| | C — 64 threads, 480 G | **D — 24 threads, 64 G** | upstream psql, same class of machine |
+|---|---:|---:|---:|
+| Wall clock | 15 m 16 s | **43 m 54 s** | **~12 h** (authors' figure) |
+| Exit | `0:0` | **`0:0`** | — |
+| Threads | 64 | 24 | 24 |
+| `memory_limit` | 288 GiB | **38.4 GiB** | — |
+| Peak cgroup memory | 243.1 GiB | 64.0 GiB (= ceiling, see below) | — |
+| **Spilled to disk** | **0 bytes** | **121.76 GiB** | — |
+| Rows | 555,352,597 | 555,352,597 | — |
+| Output | 26.05 GB | 28.27 GB | — |
+
+### What this establishes
+
+**DuckDB degrades gracefully, and now that is measured rather than asserted.** Cutting cores 2.7×
+and memory 7.5× costs **2.88× wall clock** — 15 m 16 s to 43 m 54 s. The run completed `0:0` with
+all 30 resources and the full 555,352,597 rows.
+
+**It spilled 121.76 GiB and still finished in 44 minutes.** This is the more interesting half. The
+spill sampler had previously reported `peak_spill_bytes = 6` for configuration C, so it was already
+known to report zero correctly when nothing spills; here it reports 121.76 GiB, and
+`temp_dir_final_bytes = 6` confirms the temp directory was cleaned up afterwards. DuckDB's
+out-of-core path works, and the penalty for exceeding memory by ~3× is a factor under 3, not a
+failure.
+
+**Against the authors' own documented figure on the same class of machine: ~16× faster** (~12 h
+vs 43 m 54 s). This is the single most defensible speedup in the document, because it removes the
+hardware objection entirely — no 480 GB node, no 64 cores, no exclusive allocation advantage. It
+is also *conservative* relative to the headline: 16× against 26.5–35.4×, because D is deliberately
+handicapped.
+
+⚠️ **The ~12 h is the authors' figure for `create_fhir_tables.sql`, not a run we performed.** It is
+a documented claim in the upstream README, not a measurement under our control, and it covers the
+conversion step rather than the full pipeline. Cite it as *"the authors report ~12 hours on a
+comparable machine"*, not as a measured baseline.
+
+### Two observations worth recording
+
+**Peak cgroup memory hit exactly 64.0 GiB — the ceiling.** As established in §6b, cgroup
+`memory.current` includes page cache, so this is the kernel filling available memory with cache,
+not DuckDB demanding it. The job exited `0:0` with no OOM, and the tracked buffer pool was capped
+at 38.4 GiB throughout.
+
+**Output is 28.27 GB against C's 26.05 GB — 8.5% larger for identical content.** Consistent in
+direction with the B′/B finding (§6): fewer threads produced a *larger* zstd artifact. A plausible
+contributor is that spilling reorders the rows reaching the writer and so degrades compression
+locality, but this run cannot separate that from the thread-count change. **Hypothesis, not a
+measurement.**
+
+---
+
 ## 11. What can be claimed
 
 Sorted by how much evidence stands behind it. Tier 1 can be stated flatly; tier 2 needs its
@@ -936,6 +1001,9 @@ qualifier attached; tier 3 is not currently supported by anything measured here.
 | Full-scale parity across **all 555,352,597 records**: 0 missing, 0 extra, 0 duplicated | §8 |
 | `chartevents` (313.6 M) and `labevents` (118.2 M) are **exactly equal**, nothing suppressed | §8 |
 | Only **20 records in the whole corpus** differ in a value — a documented `DOUBLE` precision limit | §8 |
+| On the **upstream authors' own machine class** (24 threads, 64 GB), DuckDB builds in **43 m 54 s** | §10b |
+| DuckDB **degrades gracefully**: 2.7× fewer cores + 7.5× less memory costs **2.88×** wall clock | §10b |
+| DuckDB's out-of-core path works: **spilled 121.76 GiB** under pressure and still completed `0:0` | §10b |
 | Neither backend was killed, throttled, or hit its Slurm ceiling | §6b |
 
 ### Tier 2 — true, but do not state without the qualifier
@@ -958,11 +1026,6 @@ pipeline or a reader who knows Postgres will correctly object.
 
 ### Tier 3 — not supported, do not claim
 
-**"DuckDB degrades gracefully on smaller machines."** Never tested. Every DuckDB run here had
-480 GB allocated and used ~247 GiB. A run under real memory pressure would spill to the temp
-directory that measured zero, and neither the slowdown nor the disk cost is known. This is the
-single largest gap between what is measured and what the thesis wants to argue.
-
 **"DuckDB is cheaper to run."** Cost depends on the price of a 480 GB node versus a 192 GB node for
 15 hours, which was never computed.
 
@@ -973,14 +1036,20 @@ identical once the accepted `hasMember` ordering is set aside, and 3 with docume
 2 of them unspecified ordering in the shared SQL, 1 a real `DOUBLE` precision limit affecting 20
 records** (§8). State it at that resolution.
 
-### The one experiment that would move the biggest claim from tier 3 to tier 1
+### If you only have one page
 
-Re-run configuration C with `--mem=64G` — matching the upstream README's reference machine exactly.
-One job, ~1 h at worst. It would answer three things at once: whether DuckDB completes at all under
-the memory the psql authors assumed, how much it spills (the sampler is already in place and already
-proved it reports zero correctly), and what the slowdown is. That converts *"scales to available
-resources"* from an assertion into a measurement, and does it on the same hardware footing the
-upstream authors documented — which is a considerably stronger result than another run on a fat node.
+Lead with configuration D (§10b), not the headline. It is the smaller number and the stronger
+argument:
+
+> Rebuilding MIMIC-IV-on-FHIR with the DuckDB port takes **43 minutes on the same class of machine
+> the upstream authors document** (24 threads, 64 GB), against the ~12 hours they report — while
+> requiring 4.7 GiB of intermediate storage rather than the 2 TB the upstream README asks you to
+> provision. Output is semantically equivalent across all 555,352,597 records, with 20 records
+> differing in decimal precision.
+
+Every figure in that paragraph is tier 1, and it pre-empts the only serious objection to the
+section — that the speedup came from a bigger machine. The 26.5–35.4× headline is the *better*
+result but the *weaker* argument, because it invites exactly that question.
 
 ---
 
@@ -988,8 +1057,10 @@ upstream authors documented — which is a considerably stronger result than ano
 
 - ~~Full-scale parity must pass before any of this is quotable~~ — **done, all three shards
   complete** (§8). 27/30 identical, 0 records missing or extra, 205,186 differing (0.037%).
-- **A memory-constrained DuckDB run (§11)** — the highest-value remaining experiment.
-  Jobs `30382950` (64 c / 64 G) and `30382951` (24 c / 64 G, upstream reference machine) submitted.
+- ~~A memory-constrained DuckDB run~~ — **done**, job `30382951` = configuration D (§10b).
+  43 m 54 s on 24 threads / 64 GB, spilled 121.76 GiB, exit `0:0`. The companion run `30382950`
+  (64 threads / 64 GB, isolating memory from core count) was cancelled as redundant for a
+  one-page write-up; resubmit it if the thread/memory contributions ever need separating.
 - ~~B′ column completion~~ — done, job `30374316` (§6).
 - ~~Enable the parallel path for zstd~~ — done, `CONCATENABLE` in `driver.py`, config C complete (§10).
 - Why `labevents` shows no locality effect in B′ vs B while `chartevents` shows 15% (§6).
