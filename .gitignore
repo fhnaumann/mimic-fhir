@@ -145,3 +145,11 @@ tutorial/pathling/output
 *mimiciv*
 *hapi-fhir-jpaserver-starter*
 *local_mimic_fhir_files*
+
+# Full MIMIC-IV debug outputs and Slurm logs stay local: they hold patient-level
+# rows and small cells from the credentialed dataset. Only the demo smoke run is
+# tracked.
+debug-*/hpc/results/*
+!debug-*/hpc/results/demo-smoke/
+debug-*/hpc/logs/
+metrics/duckdb/logs/

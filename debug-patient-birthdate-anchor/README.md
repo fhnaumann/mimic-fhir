@@ -19,6 +19,11 @@ shape, same HPC conventions.
     hpc/run_patient_birthdate_anchor.slurm  batch runner
     hpc/results/job-<id>/                   report.txt, summary.json, CSVs
 
+The full-cohort outputs under `hpc/results/job-*/` and the Slurm logs are
+local only (gitignored): they come from the credentialed MIMIC-IV dataset and
+contain patient-level rows and small cells. Re-run the batch job below to
+regenerate them.
+
 ## Running it
 
     scp hpc/{patient_birthdate_anchor.py,run_patient_birthdate_anchor.slurm,setup_env.sh} \
