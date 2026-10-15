@@ -267,3 +267,5 @@ The script requires `click` python package (in addition to the packages listed i
 - The [HAPI FHIR Server Validation](https://github.com/kind-lab/mimic-fhir/wiki/HAPI-FHIR-Server-Validation) section walks through validating the MIMIC resources against various implementation guides using HAPI FHIR.
 - The [py_mimic_fhir CLI](https://github.com/kind-lab/mimic-fhir/wiki/py_mimic_fhir-CLI) section details the arguments that can be used in the CLI
 - The [Bundle and Export](https://github.com/kind-lab/mimic-fhir/wiki/HAPI-Bundles-and-Export) section goes over the bundling process and export execution.
+
+Third-party material in this repository and its terms: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
